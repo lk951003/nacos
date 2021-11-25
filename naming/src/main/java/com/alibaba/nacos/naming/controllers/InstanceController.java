@@ -104,15 +104,24 @@ public class InstanceController {
     @PostMapping
     @Secured(parser = NamingResourceParser.class, action = ActionTypes.WRITE)
     public String register(HttpServletRequest request) throws Exception {
-        
+        // 获取命名空间Id，默认为"public"
         final String namespaceId = WebUtils
                 .optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);
+
+        // 获取服务名
         final String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
         NamingUtils.checkServiceNameFormat(serviceName);
-        
+
+        // 构建实例信息
         final Instance instance = HttpRequestInstanceBuilder.newBuilder()
                 .setDefaultInstanceEphemeral(switchDomain.isDefaultInstanceEphemeral()).setRequest(request).build();
-        
+
+        // 设置元数据
+        // Map<String, String> metadata = new HashMap<>();
+        // metadata.put(PreservedMetadataKeys.HEART_BEAT_TIMEOUT, "60000");
+        // instance.setMetadata(metadata);
+
+        // 注册实例
         getInstanceOperator().registerInstance(namespaceId, serviceName, instance);
         return "ok";
     }

@@ -45,7 +45,9 @@ public class UnhealthyInstanceChecker implements InstanceBeatChecker {
     
     @Override
     public void doCheck(Client client, Service service, HealthCheckInstancePublishInfo instance) {
+        // 实例健康，但是心跳超时
         if (instance.isHealthy() && isUnhealthy(service, instance)) {
+            // 修改健康状态为false
             changeHealthyStatus(client, service, instance);
         }
     }

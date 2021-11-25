@@ -78,6 +78,8 @@ public class ServiceStorage {
     
     public ServiceInfo getPushData(Service service) {
         ServiceInfo result = emptyServiceInfo(service);
+        // 服务注册时，会新建一个单例服务缓存到ServiceManager的singletonRepository中
+        // 如果服务未注册，直接返回实例信息为空的服务。
         if (!ServiceManager.getInstance().containSingleton(service)) {
             return result;
         }

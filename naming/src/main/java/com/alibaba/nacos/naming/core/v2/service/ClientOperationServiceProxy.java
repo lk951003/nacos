@@ -46,7 +46,9 @@ public class ClientOperationServiceProxy implements ClientOperationService {
     
     @Override
     public void registerInstance(Service service, Instance instance, String clientId) {
+        // 通过判断是否为临时类型，拿到对应的service
         final ClientOperationService operationService = chooseClientOperationService(instance);
+        // 注册实例
         operationService.registerInstance(service, instance, clientId);
     }
     

@@ -97,6 +97,7 @@ public class NamingEventPublisher extends Thread implements ShardedEventPublishe
     @Override
     public boolean publish(Event event) {
         checkIsStart();
+        // 事件放到阻塞队列中尾部
         boolean success = this.queue.offer(event);
         if (!success) {
             Loggers.EVT_LOG.warn("Unable to plug in due to interruption, synchronize sending time, event : {}", event);
@@ -151,7 +152,7 @@ public class NamingEventPublisher extends Thread implements ShardedEventPublishe
             ThreadUtils.sleep(1000L);
         }
     }
-    
+    // 线程，死循环，从阻塞队列中取得事件，处理事件。
     private void handleEvents() {
         while (!shutdown) {
             try {
@@ -165,6 +166,7 @@ public class NamingEventPublisher extends Thread implements ShardedEventPublishe
     
     private void handleEvent(Event event) {
         Class<? extends Event> eventType = event.getClass();
+        // 通过事件类型，获取订阅者集合
         Set<Subscriber<? extends Event>> subscribers = subscribes.get(eventType);
         if (null == subscribers) {
             if (Loggers.EVT_LOG.isDebugEnabled()) {
@@ -172,6 +174,7 @@ public class NamingEventPublisher extends Thread implements ShardedEventPublishe
             }
             return;
         }
+        // 通知所有订阅者
         for (Subscriber subscriber : subscribers) {
             notifySubscriber(subscriber, event);
         }

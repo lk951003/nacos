@@ -97,10 +97,24 @@ public class InstanceOperatorClientImpl implements InstanceOperator {
      */
     @Override
     public void registerInstance(String namespaceId, String serviceName, Instance instance) {
+        // 是否是临时实例
         boolean ephemeral = instance.isEphemeral();
+
+        // 获取clientId
         String clientId = IpPortBasedClient.getClientId(instance.toInetAddr(), ephemeral);
+
+        // 创建IpPortClient，如果clientId不存在，则加入到clientManager中，后面会获取。
+        // 开启健康检查，每五秒一次。
+        // 最后心跳时间距离当前时间，超时15秒，修改为不健康状态，不健康的实例不会返回给客户端。
+        // 心跳超时时间可通过配置调整：preserved.heart.beat.timeout。
+        // 调用链：IpPortBasedClient.init() -> ClientBeatCheckTaskV2.doHealthCheck()
+        //        -> InstanceBeatCheckTask.passIntercept() -> UnhealthyInstanceChecker.doCheck()
         createIpPortClientIfAbsent(clientId);
+
+        // 构造服务对象
         Service service = getService(namespaceId, serviceName, ephemeral);
+
+        // 注册实例
         clientOperationService.registerInstance(service, instance, clientId);
     }
     
