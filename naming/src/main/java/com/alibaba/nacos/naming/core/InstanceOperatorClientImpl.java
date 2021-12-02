@@ -105,7 +105,7 @@ public class InstanceOperatorClientImpl implements InstanceOperator {
 
         // 创建IpPortClient，如果clientId不存在，则加入到clientManager中，后面会获取。
         // 开启健康检查，每五秒一次。
-        // 最后心跳时间距离当前时间，超时15秒，修改为不健康状态，不健康的实例不会返回给客户端。
+        // 最后心跳时间距离当前时间，超时15秒，修改为不健康状态。（不健康的实例不会返回给客户端？待确认）
         // 心跳超时时间可通过配置调整：preserved.heart.beat.timeout。
         // 调用链：IpPortBasedClient.init() -> ClientBeatCheckTaskV2.doHealthCheck()
         //        -> InstanceBeatCheckTask.passIntercept() -> UnhealthyInstanceChecker.doCheck()
@@ -227,21 +227,28 @@ public class InstanceOperatorClientImpl implements InstanceOperator {
     @Override
     public int handleBeat(String namespaceId, String serviceName, String ip, int port, String cluster,
             RsInfo clientBeat, BeatInfoInstanceBuilder builder) throws NacosException {
+        // 通过 namespaceId + serviceName，获取 Service 对象
         Service service = getService(namespaceId, serviceName, true);
+        // 获取clientId：127.0.0.1:8080#true
         String clientId = IpPortBasedClient.getClientId(ip + InternetAddressUtil.IP_PORT_SPLITER + port, true);
+        // 从clientManager缓存中获取IpPortBasedClient
         IpPortBasedClient client = (IpPortBasedClient) clientManager.getClient(clientId);
+        // 每个服务在注册时，都会实例化一个IpPortBasedClient对象，缓存到clientManager中
         if (null == client || !client.getAllPublishedService().contains(service)) {
             if (null == clientBeat) {
                 return NamingResponseCode.RESOURCE_NOT_FOUND;
             }
+            // 如果服务未注册，会根据心跳的参数，生成Instance对象，然后进行实例注册。
             Instance instance = builder.setBeatInfo(clientBeat).setServiceName(serviceName).build();
             registerInstance(namespaceId, serviceName, instance);
             client = (IpPortBasedClient) clientManager.getClient(clientId);
         }
+        // ServiceManager中是否存在该服务
         if (!ServiceManager.getInstance().containSingleton(service)) {
             throw new NacosException(NacosException.SERVER_ERROR,
                     "service not found: " + serviceName + "@" + namespaceId);
         }
+        // 心跳信息为空时，实例化一个。
         if (null == clientBeat) {
             clientBeat = new RsInfo();
             clientBeat.setIp(ip);
@@ -249,8 +256,11 @@ public class InstanceOperatorClientImpl implements InstanceOperator {
             clientBeat.setCluster(cluster);
             clientBeat.setServiceName(serviceName);
         }
+        // 心跳处理器，关键逻辑在此
         ClientBeatProcessorV2 beatProcessor = new ClientBeatProcessorV2(namespaceId, clientBeat, client);
+        // 将任务放到线程池中执行
         HealthCheckReactor.scheduleNow(beatProcessor);
+        // 更新时间戳
         client.setLastUpdatedTime();
         return NamingResponseCode.OK;
     }

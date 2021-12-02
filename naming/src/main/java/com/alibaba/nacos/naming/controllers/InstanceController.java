@@ -376,10 +376,11 @@ public class InstanceController {
     @PutMapping("/beat")
     @Secured(parser = NamingResourceParser.class, action = ActionTypes.WRITE)
     public ObjectNode beat(HttpServletRequest request) throws Exception {
-        
+        // 构造响应对象
         ObjectNode result = JacksonUtils.createEmptyJsonNode();
         result.put(SwitchEntry.CLIENT_BEAT_INTERVAL, switchDomain.getClientBeatInterval());
-        
+
+        // 从HttpServletRequest提取参数
         String beat = WebUtils.optional(request, "beat", StringUtils.EMPTY);
         RsInfo clientBeat = null;
         if (StringUtils.isNotBlank(beat)) {
@@ -401,17 +402,23 @@ public class InstanceController {
         }
         String namespaceId = WebUtils.optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);
         String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
+        // 检查服务名格式，不满足抛 IllegalArgumentException 异常
         NamingUtils.checkServiceNameFormat(serviceName);
         Loggers.SRV_LOG.debug("[CLIENT-BEAT] full arguments: beat: {}, serviceName: {}, namespaceId: {}", clientBeat,
                 serviceName, namespaceId);
         BeatInfoInstanceBuilder builder = BeatInfoInstanceBuilder.newBuilder();
         builder.setRequest(request);
+
+        // 心跳处理
         int resultCode = getInstanceOperator()
                 .handleBeat(namespaceId, serviceName, ip, port, clusterName, clientBeat, builder);
+
+        // 响应对象填充数据
         result.put(CommonParams.CODE, resultCode);
         result.put(SwitchEntry.CLIENT_BEAT_INTERVAL,
                 getInstanceOperator().getHeartBeatInterval(namespaceId, serviceName, ip, port, clusterName));
         result.put(SwitchEntry.LIGHT_BEAT_ENABLED, switchDomain.isLightBeatEnabled());
+
         return result;
     }
     
